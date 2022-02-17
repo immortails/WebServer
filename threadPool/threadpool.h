@@ -93,6 +93,7 @@ void threadpool<T>::run(){
         if(!request){
             continue;
         }
+        request->read();
         request->process();
     }
 }

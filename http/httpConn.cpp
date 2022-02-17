@@ -111,23 +111,29 @@ httpConn::LINE_STATUS httpConn::parseLine(){                        //去掉一�
 
 
 bool httpConn::read(){                //循环读取数据直到无数据可读
+    int flag=true;
     if(mReadIdx >= READ_BUFFER_SIZE){
-        return false;
+        flag=false;
     }
-    int bytesRead=0;
-    while(1){
-        bytesRead=recv(mSockfd,mReadBuf+mReadIdx,READ_BUFFER_SIZE-mReadIdx,0);
-        if(bytesRead==-1){
-            if(errno==EAGAIN||errno==EWOULDBLOCK){
+    if(flag){
+        int bytesRead=0;
+        while(1){
+            bytesRead=recv(mSockfd,mReadBuf+mReadIdx,READ_BUFFER_SIZE-mReadIdx,0);
+            if(bytesRead==-1){
+                if(errno==EAGAIN||errno==EWOULDBLOCK){
+                    break;
+                }
+                flag= false;
+                break;
+            }else if(bytesRead==0){
+                flag= false;
                 break;
             }
-            return false;
-        }else if(bytesRead==0){
-            return false;
+            mReadIdx+=bytesRead;
         }
-        mReadIdx+=bytesRead;
     }
-    return true;
+    if(!flag) closeConn();
+    return flag;
 }
 
 //解析请求行，获得请求方法，目标URL，以及HTTP版本号
@@ -180,7 +186,7 @@ httpConn::HTTP_CODE httpConn::parseHeaders(char* text){
     }
         
     //处理connection 头部字段
-    else if(strncasecmp(text,"Connection",11)==0){
+    else if(strncasecmp(text,"Connection:",11)==0){
         text+=11;
         text+=strspn(text,"\t");
         if(strcasecmp(text,"keep-alive")==0){
@@ -188,7 +194,7 @@ httpConn::HTTP_CODE httpConn::parseHeaders(char* text){
         }
     }
     //处理Content-Length 头部字段
-    else if(strncasecmp(text,"Content-Length",15)==0){
+    else if(strncasecmp(text,"Content-Length:",15)==0){
         text+=15;
         text+=strspn(text,"\t");
     }

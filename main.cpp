@@ -1,3 +1,10 @@
+/*
+    2022.2.17 修复ET触发却没有循环读取导致服务器卡死的问题；将read()从主线程中放入处理线程中
+*/
+
+
+
+
 #include<sys/socket.h>
 #include<netinet/in.h>
 #include<arpa/inet.h>
@@ -84,25 +91,28 @@ int main(){
             int sockfd=events[i].data.fd;
             if(sockfd==listenfd){                                                   //新的连接
                 //std::cout<<"get new connection"<<std::endl;
-                sockaddr_in clientAddr;
-                socklen_t clientAddrsz=sizeof(clientAddr);
-                int connfd=accept(listenfd,(sockaddr*)&clientAddr,&clientAddrsz);
-                assert(connfd>=0);
-                assert(httpConn::mUserCount<MAX_FD);
-                users[connfd].init(connfd,clientAddr);                              //在这里添加了sockfd与对应地址
+                while(1){ //ET边沿触发
+                    sockaddr_in clientAddr;
+                    socklen_t clientAddrsz=sizeof(clientAddr);
+                    int connfd=accept(listenfd,(sockaddr*)&clientAddr,&clientAddrsz);
+                    if(connfd<0) break; 
+                    assert(httpConn::mUserCount<MAX_FD);
+                    users[connfd].init(connfd,clientAddr);   
+                }
+                           //在这里添加了sockfd与对应地址
             }else if(events[i].events & (EPOLLRDHUP|EPOLLRDHUP|EPOLLERR)){          //如果连接异常直接关闭
                 users[sockfd].closeConn();
             }else if(events[i].events & EPOLLIN){
                 //std::cout<<"have data"<<std::endl;
                 //根据读的结果来决定将任务添加到线程池还是关闭连接
-                if(users[sockfd].read()){
+                //if(users[sockfd].read()){
                     //这步读竟然在主线程里实现，有点奇怪
                     //std::cout<<"read"<<std::endl;
-                    pool->append(users+sockfd);
-                }else{
+                pool->append(users+sockfd);
+                //}else{
                     //std::cout<<"wrong"<<std::endl;
-                    users[sockfd].closeConn();
-                }
+                //    users[sockfd].closeConn();
+                //}
             }else if(events[i].events & EPOLLOUT){
                 //根据写的结果决定是否关闭连接，只是检查有没有写完
                 if(!users[sockfd].write()){
