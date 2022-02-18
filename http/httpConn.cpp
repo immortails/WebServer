@@ -14,6 +14,8 @@ const char* error_500_form="There was an unusual problem serving the requested f
 //网站的根目录
 const char* docRoot="/var/www/html";
 
+
+
 int setnonblocking(int fd){                         //修改文件描述符非阻塞
     int old_option=fcntl(fd,F_GETFL);
     int new_option=old_option|O_NONBLOCK;
@@ -43,6 +45,9 @@ void modfd(int epollfd,int fd,int ev){
     event.events=ev|EPOLLET|EPOLLONESHOT|EPOLLRDHUP;
     epoll_ctl(epollfd,EPOLL_CTL_MOD,fd,&event);
 }
+
+httpConn::httpConn(){};
+httpConn::~httpConn(){};
 
 int httpConn::mUserCount=0;
 int httpConn::mEpollfd=-1;

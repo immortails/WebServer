@@ -39,8 +39,8 @@ enum HTTP_CODE {    NO_REQUEST,GET_REQUEST,BAD_REQUEST,
 enum LINE_STATUS { LINE_OK=0,LINE_BAD,LINE_OPEN};                           //行读取状态
 
 public:
-    httpConn(){};
-    ~httpConn(){};
+    httpConn();
+    ~httpConn();
 public:
     void init(int sockfd,const sockaddr_in& addr);                          //初始化新接受的连接
     void closeConn( bool real_close=true);                                 //关闭连接
