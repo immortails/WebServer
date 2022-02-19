@@ -11,7 +11,7 @@ timeHeap::~timeHeap(){
     }
 }
 
-void timeHeap::addTimer(timer* _timer) throw (std::exception){
+void timeHeap::addTimer(timer* _timer){
     if(!_timer) return ;
     heap.emplace_back(_timer);
     heapInsert(heap.size()-1);                     //插入新的定时器

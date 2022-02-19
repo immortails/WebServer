@@ -8,7 +8,7 @@ else
 
 endif
 
-server: main.cpp  http/httpConn.cpp 
+server: main.cpp  http/httpConn.cpp server/server.cpp timer/heapTimer.cpp
 	$(CXX) -o debug/server  $^ $(CXXFLAGS) -lpthread 
 
 clean:
