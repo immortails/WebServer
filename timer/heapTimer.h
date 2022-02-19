@@ -32,6 +32,15 @@ public:
     }
 };
 
+/*绑定socket与定时器以及http处理对象*/
+struct clientData{
+    sockaddr_in addr;
+    int sockfd;
+    char buf[BUFF_SIZE];
+    httpConn* clientHttp; 
+    timer* clientTimer;
+};
+
 
 class timeHeap{
 private:
@@ -42,18 +51,12 @@ public:
     timeHeap(int cap);
     ~timeHeap();
 
-public:
     void addTimer(timer* _timer);
     void delTimer(timer* _timer);
+    void adjTimer(timer* _timer,int delayTime);
+    void popTimer();
+
     timer* top() const;
-    void popTimer();/*绑定socket与定时器以及http处理对象*/
-struct clientData{
-    sockaddr_in addr;
-    int sockfd;
-    char buf[BUFF_SIZE];
-    httpConn* clientHttp; 
-    timer* clientTimer;
-};
     void tick();
 private:
     void heapify(int idx);

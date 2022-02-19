@@ -1,7 +1,10 @@
 #include"server.h"
 
+
 extern int addfd(int epollfd,int fd,bool one_shot);
 extern int removefd(int epollfd,int fd);
+extern int setnonblocking(int fd);
+
 
 void addsig(int sig,void(handler)(int),bool restart=true){
     struct sigaction sa;
@@ -13,6 +16,8 @@ void addsig(int sig,void(handler)(int),bool restart=true){
     sigfillset(&sa.sa_mask);
     assert(sigaction(sig,&sa,NULL)!=-1);
 }
+
+
 
 
 void server::initThreadPool(int threadNumber,int maxRequests){
@@ -53,6 +58,11 @@ void server::initSocket(const char* ip,const char* port){
     epollfd=epoll_create(5);
     assert(epollfd!=-1);
     addfd(epollfd,listenfd,false);
+    //定时器的事件，统一事件源
+    addsig(SIGALRM,sigHandler);
+    setnonblocking(pipefd[1]);
+    addfd(epollfd,pipefd[0],false);
+    alarm(TIMESLOT);    //定时
 }
 
 void server::init(){
@@ -60,6 +70,7 @@ void server::init(){
     initSocket();
     addsig(SIGPIPE,SIG_IGN);
     users=new clientData[MAX_FD];
+    timerContain=new timeHeap(100);
     //预先创建好每一个httpConn
     for(int i=0;i<MAX_FD;i++){
         users[i].clientHttp=new httpConn;
@@ -67,7 +78,25 @@ void server::init(){
     assert(users);
     httpConn::mEpollfd=epollfd;
 
-}                  
+}  
+
+void server::sigHandler(int sig){
+    int saveErrno=errno;
+    int msg=sig;
+    send(pipefd[1],(char*)msg,1,0);
+    errno=saveErrno;
+}
+
+void server::timerHandler(){
+    //就是定时调用堆中的心跳函数。
+    timerContain->tick();
+    alarm(TIMESLOT);
+}
+
+void server::cbFunc(clientData* userData){
+    removefd(epollfd,userData->sockfd);
+}
+
 void server::workLoop(){
 
     while(1){
@@ -88,7 +117,12 @@ void server::workLoop(){
                     //std::cout<<connfd<<std::endl;
                     if(connfd<0) break; 
                     assert(httpConn::mUserCount<MAX_FD);
-                    users[connfd].clientHttp->init(connfd,clientAddr);              //在这里添加了sockfd与对应地址
+                    //添加定时器
+                    time_t cur=time(NULL);
+                    users[connfd].clientTimer=new timer(cur+DELAY);
+                    timerContain->addTimer(users[connfd].clientTimer);
+                    //将http事件完成注册
+                    users[connfd].clientHttp->init(connfd,clientAddr);              
                 }
             }else if(events[i].events & (EPOLLRDHUP|EPOLLRDHUP|EPOLLERR)){          //如果连接异常直接关闭
                 users[sockfd].clientHttp->closeConn();

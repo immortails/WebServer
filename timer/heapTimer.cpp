@@ -11,6 +11,11 @@ timeHeap::~timeHeap(){
     }
 }
 
+timer* timeHeap::top() const{
+    if(heap.empty()) return nullptr;
+    return heap.front();
+}
+
 void timeHeap::addTimer(timer* _timer){
     if(!_timer) return ;
     heap.emplace_back(_timer);
@@ -22,15 +27,20 @@ void timeHeap::delTimer(timer* _timer){                            //销毁指�
     _timer->cb_func=nullptr;
 }
 
-timer* timeHeap::top() const{
-    if(heap.empty()) return nullptr;
-    return heap.front();
-}
-
 void timeHeap::popTimer(){
     if(heap.empty()) return ;
     heap[0]=heap[--size];
     heapify(0);
+}
+
+void timeHeap::adjTimer(timer* _timer,int delayTime){
+    _timer->expire+=delayTime;
+    for(int i=0;i<heap.size();i++){
+        if(_timer==heap[i]){
+            heapify(i);
+            break;
+        }
+    }
 }
 /* 心跳函数*/
 void timeHeap::tick(){

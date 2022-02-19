@@ -8,4 +8,6 @@
     const int MAX_FD=65536;                 //epoll文件描述符数
     const int MAX_EVENT_NUMBER=10000;       //最多支持事件个数
 
+    const int DELAY=10;                     //连接超时时间，单位s
+
 #endif
