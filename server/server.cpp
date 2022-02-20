@@ -4,6 +4,8 @@
 extern int addfd(int epollfd,int fd,bool one_shot);
 extern int removefd(int epollfd,int fd);
 extern int setnonblocking(int fd);
+int server::pipefd[2];
+
 
 
 void addsig(int sig,void(handler)(int),bool restart=true){
@@ -60,9 +62,13 @@ void server::initSocket(const char* ip,const char* port){
     addfd(epollfd,listenfd,false);
     //定时器的事件，统一事件源
     addsig(SIGALRM,sigHandler);
+    pipe(pipefd);
+    pipe(pipefdHttp);
     setnonblocking(pipefd[1]);
+    setnonblocking(pipefdHttp[1]);
     addfd(epollfd,pipefd[0],false);
-    alarm(TIMESLOT);    //定时
+    addfd(epollfd,pipefdHttp[0],false);         //让httpConn告知已超时
+    alarm(DELAY);    //定时
 }
 
 void server::init(){
@@ -70,7 +76,6 @@ void server::init(){
     initSocket();
     addsig(SIGPIPE,SIG_IGN);
     users=new clientData[MAX_FD];
-    timerContain=new timeHeap(100);
     //预先创建好每一个httpConn
     for(int i=0;i<MAX_FD;i++){
         users[i].clientHttp=new httpConn;
@@ -83,18 +88,14 @@ void server::init(){
 void server::sigHandler(int sig){
     int saveErrno=errno;
     int msg=sig;
-    send(pipefd[1],(char*)msg,1,0);
+    write(pipefd[1],(char*)&msg,1);
     errno=saveErrno;
 }
 
 void server::timerHandler(){
     //就是定时调用堆中的心跳函数。
-    timerContain->tick();
-    alarm(TIMESLOT);
-}
-
-void server::cbFunc(clientData* userData){
-    removefd(epollfd,userData->sockfd);
+    timeHeap::getInstance().tick();
+    alarm(DELAY);
 }
 
 void server::workLoop(){
@@ -102,6 +103,7 @@ void server::workLoop(){
     while(1){
         //users[0].clientHttp->closeConn();
         int num=epoll_wait(epollfd,events,MAX_EVENT_NUMBER,-1);
+        //std::cout<<num<<std::endl;
         if((num<0) && (errno!=EINTR)){
             std::cout<<"epoll failture"<<std::endl;
             break;
@@ -114,26 +116,54 @@ void server::workLoop(){
                     sockaddr_in clientAddr;
                     socklen_t clientAddrsz=sizeof(clientAddr);
                     int connfd=accept(listenfd,(sockaddr*)&clientAddr,&clientAddrsz);
-                    //std::cout<<connfd<<std::endl;
+                    //std::cout<<"connfd "<<connfd<<std::endl;
                     if(connfd<0) break; 
                     assert(httpConn::mUserCount<MAX_FD);
                     //添加定时器
                     time_t cur=time(NULL);
-                    users[connfd].clientTimer=new timer(cur+DELAY);
-                    timerContain->addTimer(users[connfd].clientTimer);
+                    if(users[connfd].clientTimer!=nullptr){                         //去掉之前被关掉连接上的定时器，用一个新的代替
+                        users[connfd].clientTimer->userData=nullptr;
+                        users[connfd].clientTimer=nullptr;
+                    }
+                    users[connfd].clientTimer=new timer(cur+3*DELAY);
+                    users[connfd].clientTimer->userData=&users[connfd];
+                    timeHeap::getInstance().addTimer(users[connfd].clientTimer);
                     //将http事件完成注册
-                    users[connfd].clientHttp->init(connfd,clientAddr);              
+                    users[connfd].clientHttp->init(users[connfd].addr,connfd,pipefdHttp[1]);
+                    //std::cout<<"over"<<std::endl; 
                 }
-            }else if(events[i].events & (EPOLLRDHUP|EPOLLRDHUP|EPOLLERR)){          //如果连接异常直接关闭
+                //std::cout<<"over"<<std::endl;
+            }else if(events[i].events & (EPOLLRDHUP|EPOLLHUP|EPOLLERR)){          //如果连接异常直接关闭
+                //if(events[i].events & (EPOLLRDHUP)) std::cout<<"EPOLLRDHUP"<<std::endl;
+                //if(events[i].events & (EPOLLHUP)) std::cout<<"EPOLLHUP"<<std::endl;
+                //if(events[i].events & (EPOLLERR)) std::cout<<"EPOLLERR"<<std::endl;
                 users[sockfd].clientHttp->closeConn();
-            }else if(events[i].events & EPOLLIN){
-                pool->append(users+sockfd);
-            }else if(events[i].events & EPOLLOUT){
-                //如果TCP写缓冲有了写空间，就把相应的没写完的东西写完，
-                //之所以放到主线程里是因为没必要让工作线程一直等待。
-                if(!users[sockfd].clientHttp->write()){
-                    users[sockfd].clientHttp->closeConn();
+            }else if(sockfd==pipefd[0] && (events[i].events & EPOLLIN)){
+                //处理信号
+                int sig;
+                int ret=read(pipefd[0],signals,sizeof(signals));
+                if(ret==-1){
+                    continue;
+                }else if(ret==0){
+                    continue;
+                }else{
+                    for(int i=0;i<ret;i++){
+                        switch(signals[i]){
+                            case SIGALRM:{  //先延迟一下，信号的事件不是很紧急
+                                timeout=true;
+                                break;
+                            }
+                        }
+                    }
                 }
+            }else if(events[i].events & EPOLLIN){
+                timeHeap::getInstance().adjTimer(users[sockfd].clientTimer);
+                pool->append(users+sockfd);
+
+            }
+            if(timeout){
+                timerHandler();
+                timeout=false;
             }
         }
     }

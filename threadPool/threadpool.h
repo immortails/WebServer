@@ -94,6 +94,7 @@ void threadpool<T>::run(){
             continue;
         }
         request->clientHttp->read();
+        //std::cout<<"get a task"<<std::endl;
         request->clientHttp->process();
     }
 }

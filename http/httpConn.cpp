@@ -59,14 +59,14 @@ void httpConn::closeConn(bool realClose){
         mUserCount--;
     }
 }
-
-void httpConn::init(int sockfd,const sockaddr_in& addr){
-    mSockfd=sockfd;
+void httpConn::init(sockaddr_in addr,int sock,int _pipefd){
+    mSockfd=sock;
     mAddress=addr;
+    mPipefd=_pipefd;
     //关掉TIME_WAIT的，真实代码应该删除下面两行
     int reuse=1;
     setsockopt(mSockfd,SOL_SOCKET,SO_REUSEADDR,&reuse,sizeof(reuse));
-    addfd(mEpollfd,sockfd,true);
+    addfd(mEpollfd,mSockfd,true);
     mUserCount++;
     init();
 }
@@ -137,7 +137,9 @@ bool httpConn::read(){                //循环读取数据直到无数据可读
             mReadIdx+=bytesRead;
         }
     }
-    if(!flag) closeConn();
+    if(!flag){
+        closeConn();
+    }
     return flag;
 }
 
@@ -302,26 +304,25 @@ void httpConn::unmap(){
 }
 
 //写HTTP响应
-bool httpConn::write(){
+int httpConn::writeData(){      //0 发送完毕close连接，1 发送失败继续发送，2发送完毕但不关闭连接
     int temp=0;
     int bytesHaveSend=0;
     int bytesToSend=mWriteIdx;
     if(bytesToSend==0){
         modfd(mEpollfd,mSockfd,EPOLLIN);
         init();                             //写完后将其初始化，清空之前的
-        return true;
+        return 2;
     }
 
     while(1){
         temp=writev(mSockfd,mIv,mIvCnt);
         if(temp<=-1){
             //如果TCP写缓冲没有空间，则等待下一轮EPOLLOUT事件，虽然此时服务器无法立刻收到同一个用户的下一个请求，但是这样保证了完整性。
-            if(errno==EAGAIN){              //此时读完了
-                modfd(mEpollfd,mSockfd,EPOLLOUT);   
-                return true;
+            if(errno==EAGAIN){              
+                return 1;
             }
             unmap();
-            return false;
+            return 0;
         }
         bytesToSend-=temp;
         bytesHaveSend+=temp;
@@ -331,10 +332,10 @@ bool httpConn::write(){
             if(mLinger){
                 init();
                 modfd(mEpollfd,mSockfd,EPOLLIN);
-                return true;
+                return 2;
             }else{
                 modfd(mEpollfd,mSockfd,EPOLLIN);
-                return false;
+                return 0;
             }
         }
     }
@@ -458,8 +459,15 @@ void httpConn::process(){
         return ;
     }
     bool writeRet =processWrite(readRet);
-    if(!writeRet){
-        closeConn();
+    if(writeRet){
+        //先尝试在线程中写干净，写不完再交给主线程
+        int flag=1;
+        while(flag==1){
+            flag=writeData();
+        }
+        if(flag==0){
+            closeConn();
+        }
     }
-    modfd(mEpollfd,mSockfd,EPOLLOUT);
+    return;                          
 }

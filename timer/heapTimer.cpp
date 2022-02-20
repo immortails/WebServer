@@ -1,9 +1,8 @@
 #include "heapTimer.h"
-timeHeap::timeHeap(int cap):size(cap){
-    heap=std::vector<timer*>(cap);
-    for(int i=0;i<cap;i++){ 
-        heap[i]=nullptr;
-    }
+
+timeHeap* timeHeap::timeContain;
+
+timeHeap::timeHeap():size(0){
 }
 timeHeap::~timeHeap(){
     for(int i=0;i<size;i++){
@@ -17,42 +16,51 @@ timer* timeHeap::top() const{
 }
 
 void timeHeap::addTimer(timer* _timer){
+    //std::cout<<"addTimer"<<std::endl;
     if(!_timer) return ;
     heap.emplace_back(_timer);
-    heapInsert(heap.size()-1);                     //插入新的定时器
+    size++;
+    heapInsert(heap.size()-1);                                     //插入新的定时器
 }
 
+/*
 void timeHeap::delTimer(timer* _timer){                            //销毁指定定时器
-    if(!_timer) return;
-    _timer->cb_func=nullptr;
+    if(_timer==nullptr) return;
+    if(!_timer->closedConn){
+        std::cout<<"del timer"<<std::endl;
+        _timer->userData->clientHttp->closeConn();
+        _timer->closedConn=true;
+    }
 }
-
+*/
 void timeHeap::popTimer(){
-    if(heap.empty()) return ;
-    heap[0]=heap[--size];
+    //std::cout<<"size"<<size<<std::endl;
+    if(size==0) return ;
+    if(heap[0]->userData!=nullptr) heap[0]->userData->clientHttp->closeConn();
+    delete heap[0];
+    size--;
+    heap[0]=heap[size];
+    heap[size]=nullptr;
+    heap.pop_back();
     heapify(0);
 }
 
-void timeHeap::adjTimer(timer* _timer,int delayTime){
-    _timer->expire+=delayTime;
-    for(int i=0;i<heap.size();i++){
-        if(_timer==heap[i]){
-            heapify(i);
-            break;
-        }
-    }
+void timeHeap::adjTimer(timer* _timer){
+    time_t cur=time(nullptr);   //旧的不管，等着定时pop
+    timer* _timer1=new timer(cur+3*DELAY);
+    _timer->userData=nullptr;
+    _timer1->userData=_timer->userData;
+    addTimer(_timer1);
 }
 /* 心跳函数*/
 void timeHeap::tick(){
+    if(size==0) return;
     timer* tmp=heap[0];
     time_t cur=time(nullptr);
-    while (!heap.empty())
-    {
-        if(!tmp) break;
-        if(tmp->expire>cur) break;
-        if(heap[0]->cb_func){
-            heap[0]->cb_func(heap[0]->userData);
-        }
+    while (size>0)
+    {   
+        if(tmp==nullptr) break;
+        if(tmp->expire<cur) break;
         popTimer();
         tmp=heap[0];
     }

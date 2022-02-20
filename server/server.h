@@ -15,6 +15,7 @@
 #include<sys/epoll.h>
 #include<iostream>
 #include<errno.h>
+#include<unordered_set>
 #include "../locker/locker.h"
 #include "../threadPool/threadpool.h"
 #include "../http/httpConn.h"
@@ -30,15 +31,15 @@ private:
     threadpool<clientData>* pool=nullptr;
     epoll_event events[MAX_EVENT_NUMBER];
     clientData* users;
-
     //下面都是定时器的操作
-    static timeHeap* timerContain;
-    static const int TIMESLOT=5;
-    static int pipefd[2];
+    char signals[1024];
+    char closefdFromHC[1024];
+    bool timeout=false;
     void static sigHandler(int sig);        //定时器回调函数要设成静态的，不然传不进去参数
     void static timerHandler();
-    void cbFunc(clientData* userData);
 public:
+static int pipefd[2];
+    int pipefdHttp[2];
     server();
     ~server();
     void initThreadPool(int threadNumber=THREAD_NUMBER,int maxRequests=MAX_REQUESTS);          //初始化线程池

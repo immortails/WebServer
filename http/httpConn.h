@@ -20,6 +20,12 @@
 #include<iostream>
 #include<sys/uio.h>
 #include "../locker/locker.h"
+#include "../config.h"
+
+/*定时器类*/
+const int BUFF_SIZE=64;
+
+
 class httpConn{
 public:
 static const int FILENAME_LEN=200;          //文件名长度
@@ -42,11 +48,11 @@ public:
     httpConn();
     ~httpConn();
 public:
-    void init(int sockfd,const sockaddr_in& addr);                          //初始化新接受的连接
-    void closeConn( bool real_close=true);                                 //关闭连接
+    void init(sockaddr_in addr,int sock,int _pipefd);                                                  //初始化新接受的连接
+    void closeConn( bool real_close=true);                                  //关闭连接
     void process();                                                         //处理客户请求
     bool read();                                                            //非阻塞读
-    bool write();                                                           //非阻塞写
+    int writeData();                                                        //非阻塞写
 private:
     void init();                                                            //初始化连接
     HTTP_CODE processRead();                                               //解析HTTP请求
@@ -71,17 +77,16 @@ private:
     bool addBlankLine();
 public:
     static int mEpollfd;                   //所有socket上的事件都被注册到同一个epoll内核事件上，所以用static
-    static int mUserCount;                //统计用户数量
-private:
+    static int mUserCount;                 //统计用户数量
+    int mPipefd;                    //向server中回传任务执行完毕
     int mSockfd;                           //该HTTP连接的socket
+private:
     sockaddr_in mAddress;                  //对方的socket地址
-
     //读缓冲区
     char mReadBuf[READ_BUFFER_SIZE];      
     int mReadIdx;                           //标识读缓冲中已读数据的最后一个字节的下一个位置
     int mCheckedIdx;                        //当前正在分析的字符在读缓冲区中的位置
     int mStartLine;                         //当前正在解析的行首位置 
-
     //写缓冲区
     char mWriteBuf[WRITE_BUFFER_SIZE];    
     int mWriteIdx;                          //写缓冲区中待发送的字节数
