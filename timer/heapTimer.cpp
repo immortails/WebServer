@@ -16,7 +16,6 @@ timer* timeHeap::top() const{
 }
 
 void timeHeap::addTimer(timer* _timer){
-    //std::cout<<"addTimer"<<std::endl;
     if(!_timer) return ;
     heap.emplace_back(_timer);
     size++;
@@ -34,7 +33,6 @@ void timeHeap::delTimer(timer* _timer){                            //销毁指�
 }
 */
 void timeHeap::popTimer(){
-    //std::cout<<"size"<<size<<std::endl;
     if(size==0) return ;
     if(heap[0]->userData!=nullptr) heap[0]->userData->clientHttp->closeConn();
     delete heap[0];
@@ -60,7 +58,8 @@ void timeHeap::tick(){
     while (size>0)
     {   
         if(tmp==nullptr) break;
-        if(tmp->expire<cur) break;
+        //std::cout<<tmp->expire<<" "<<cur<<std::endl;
+        if(tmp->expire>cur) break;
         popTimer();
         tmp=heap[0];
     }
@@ -77,6 +76,7 @@ void timeHeap::heapify(int idx){
         left=2*idx+1;
     }
 }
+    //std::cout<<idx<<std::endl;
 
 void timeHeap::heapInsert(int idx){
     //heapInsert就是往上找根,根是idx

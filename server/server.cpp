@@ -120,11 +120,12 @@ void server::workLoop(){
                     if(connfd<0) break; 
                     assert(httpConn::mUserCount<MAX_FD);
                     //添加定时器
-                    time_t cur=time(NULL);
+                    time_t cur=time(nullptr);
                     if(users[connfd].clientTimer!=nullptr){                         //去掉之前被关掉连接上的定时器，用一个新的代替
                         users[connfd].clientTimer->userData=nullptr;
                         users[connfd].clientTimer=nullptr;
                     }
+                    //std::cout<<cur<<cur+3*DELAY<<std::endl;
                     users[connfd].clientTimer=new timer(cur+3*DELAY);
                     users[connfd].clientTimer->userData=&users[connfd];
                     timeHeap::getInstance().addTimer(users[connfd].clientTimer);

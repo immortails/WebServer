@@ -28,8 +28,8 @@ public:
     clientData* userData;           //用户数据
     bool closedConn =false;         // 关闭连接的标记
 public:
-    timer(int delay){
-        expire=time(nullptr)+delay;
+    timer(int _expire){
+        expire=_expire;
     }
 };
 

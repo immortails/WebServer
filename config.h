@@ -11,8 +11,4 @@
     const int DELAY=3;                     //连接超时时间，单位s
 
 
-    union MSG{
-        int sockfd;
-        char msg[4];
-    };
 #endif
