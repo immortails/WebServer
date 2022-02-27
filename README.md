@@ -24,4 +24,4 @@
 
 ## 补充
 - GET请求分析时状态转移图
-![](https://github.com/immortails/WebServer/blob/main/image/1.png)
+![image](https://github.com/immortails/WebServer/blob/main/image/1.png)
