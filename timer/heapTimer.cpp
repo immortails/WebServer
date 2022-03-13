@@ -82,5 +82,6 @@ void timeHeap::heapInsert(int idx){
     //heapInsert就是往上找根,根是idx
     while(heap[idx]->expire < heap[(idx-1)/2]->expire){
         std::swap(heap[idx],heap[(idx-1)/2]);
+        idx=(idx-1)/2;
     }
 }
