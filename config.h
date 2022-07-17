@@ -3,6 +3,7 @@
 #include "cJSON/cJSON.h"
 #include <fstream>
 #include <iostream>
+#include <sstream>
 struct conf {
     int THREAD_NUMBER=8;              //线程池的线程数
     int MAX_REQUESTS=10000;           //线程池最大支持的连接数
@@ -14,22 +15,20 @@ struct conf {
     conf(int _THREAD_NUMBER, int _MAX_REQUESTS, std::string _IP,
          std::string _PORT, int _MAX_FD, int _MAX_EVENT_NUMBER, int _DELAY):THREAD_NUMBER(_THREAD_NUMBER), 
                 MAX_REQUESTS(_MAX_REQUESTS),IP(_IP), PORT(_PORT), MAX_FD(_MAX_FD), MAX_EVENT_NUMBER(_MAX_EVENT_NUMBER),DELAY(_DELAY) {}
-    conf() {}
-    ~conf() {}
-
+    conf(){};
 };
 conf g_conf;
-std::string file = "../server_conf.json";
 
-void cofig_init() {
+void config_init() {
     /* 读取json */
-    std::ifstream fin;
-    fin.open(file, std::ios_base::in);
-    std::string data;
-    while(fin >> data) {}
+    std::string file = "server_conf.json";
+    int fd = open(file.c_str(),O_RDWR);
+	char buf[2048]={0};
+	int ret = read(fd, buf, sizeof(buf));
+	close(fd);
     cJSON *config = nullptr;
     cJSON *threadNumber, *maxRequests, *ip, *port, *maxFD, *maxEventNumber, *delay;
-    config = cJSON_Parse(data.c_str());
+    config = cJSON_Parse(buf);
     threadNumber = cJSON_GetObjectItem(config, "THREAD_NUMBER");
     maxRequests = cJSON_GetObjectItem(config, "MAX_REQUESTS");
     ip = cJSON_GetObjectItem(config, "IP");

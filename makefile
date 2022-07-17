@@ -8,8 +8,8 @@ else
 
 endif
 
-server: main.cpp  http/httpConn.cpp server/server.cpp timer/heapTimer.cpp
+server: main.cpp  http/httpConn.cpp server/server.cpp timer/heapTimer.cpp cJSON/cJSON.c
 	$(CXX) -o debug/server  $^ $(CXXFLAGS) -lpthread 
 
 clean:
-	rm  -r server
+	rm  -r debug/server

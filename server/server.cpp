@@ -1,5 +1,5 @@
 #include"server.h"
-
+#include"../config.h"
 
 extern int addfd(int epollfd,int fd,bool one_shot);
 extern int removefd(int epollfd,int fd);
@@ -22,11 +22,11 @@ void addsig(int sig,void(handler)(int),bool restart=true){
 
 
 
-void server::initThreadPool(int threadNumber,int maxRequests){
+void server::initThreadPool(){
 
     //创建线程池
     try{
-        pool=new threadpool<clientData>;
+        pool=new threadpool<clientData>(g_conf.THREAD_NUMBER,g_conf.MAX_REQUESTS);
     }
     catch(...){
         std::cout<<"creat threadPool wrong"<<std::endl;
@@ -36,10 +36,12 @@ void server::initThreadPool(int threadNumber,int maxRequests){
 }
 
 server::server(){
+    events = (epoll_event*)malloc(sizeof(epoll_event)*g_conf.MAX_EVENT_NUMBER);
     init();
 }
 
 server::~server(){
+    free(events);
     close(epollfd);
     close(listenfd);
     delete pool;
@@ -72,8 +74,10 @@ void server::initSocket(){
 }
 
 void server::init(){
+    config_init();
     initThreadPool();
     initSocket();
+    timeHeap::getInstance(g_conf.DELAY);
     addsig(SIGPIPE,SIG_IGN);
     users=new clientData[g_conf.MAX_FD];
     //预先创建好每一个httpConn
@@ -82,7 +86,7 @@ void server::init(){
     }
     assert(users);
     httpConn::mEpollfd=epollfd;
-
+    printf("server init ok!\n");
 }  
 
 void server::sigHandler(int sig){
@@ -103,7 +107,6 @@ void server::workLoop(){
     while(1){
         //users[0].clientHttp->closeConn();
         int num=epoll_wait(epollfd,events,g_conf.MAX_EVENT_NUMBER,-1);
-        //std::cout<<num<<std::endl;
         if((num<0) && (errno!=EINTR)){
             std::cout<<"epoll failture"<<std::endl;
             break;
@@ -111,7 +114,7 @@ void server::workLoop(){
         for(int i=0;i<num;i++){
             int sockfd=events[i].data.fd;
             if(sockfd==listenfd){                                                   //新的连接
-                //std::cout<<"get new connection"<<std::endl;
+                std::cout<<"get new connection"<<std::endl;
                 while(1){ //ET边沿触发
                     sockaddr_in clientAddr;
                     socklen_t clientAddrsz=sizeof(clientAddr);
@@ -125,7 +128,7 @@ void server::workLoop(){
                         users[connfd].clientTimer->userData=nullptr;
                         users[connfd].clientTimer=nullptr;
                     }
-                    //std::cout<<cur<<cur+3*DELAY<<std::endl;
+                    //std::cout<<cur<<curevents+3*DELAY<<std::endl;
                     users[connfd].clientTimer=new timer(cur+3*g_conf.DELAY);
                     users[connfd].clientTimer->userData=&users[connfd];
                     timeHeap::getInstance().addTimer(users[connfd].clientTimer);
@@ -135,7 +138,7 @@ void server::workLoop(){
                 }
                 //std::cout<<"over"<<std::endl;
             }else if(events[i].events & (EPOLLRDHUP|EPOLLHUP|EPOLLERR)){          //如果连接异常直接关闭
-                //if(events[i].events & (EPOLLRDHUP)) std::cout<<"EPOLLRDHUP"<<std::endl;
+                if(events[i].events & (EPOLLRDHUP)) std::cout<<"EPOLLRDHUP"<<std::endl;
                 //if(events[i].events & (EPOLLHUP)) std::cout<<"EPOLLHUP"<<std::endl;
                 //if(events[i].events & (EPOLLERR)) std::cout<<"EPOLLERR"<<std::endl;
                 users[sockfd].clientHttp->closeConn();

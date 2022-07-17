@@ -5,14 +5,13 @@
 #include<exception>
 #include<pthread.h>
 #include "../locker/locker.h"
-#include "../config.h"
 
 /*线程池类，将它定义为模板类*/
 template<typename T>
 class threadpool{
 public:
     /*参数thread_number是线程池中线程的数量，max_requests是请求队列中最多允许的处理的请求数量*/
-    threadpool(int thread_number=gconf.THREAD_NUMBER,int max_requests=gconf.MAX_REQUESTS);
+    threadpool(int thread_number,int max_requests);
     ~threadpool();
     //往请求队列中添加任务
     bool append(T* request);

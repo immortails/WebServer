@@ -19,7 +19,6 @@
 #include "../locker/locker.h"
 #include "../threadPool/threadpool.h"
 #include "../http/httpConn.h"
-#include "../config.h"
 #include "../timer/heapTimer.h"
 
 
@@ -42,7 +41,7 @@ static int pipefd[2];
     int pipefdHttp[2];
     server();
     ~server();
-    void initThreadPool(int threadNumber=g_conf.THREAD_NUMBER,int maxRequests=g_conf.MAX_REQUESTS);          //初始化线程池
+    void initThreadPool();          //初始化线程池
     void initSocket();              //初始化连接
     void init();                    //初始化
     void workLoop();                //主循环

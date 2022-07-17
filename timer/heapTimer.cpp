@@ -2,8 +2,10 @@
 
 timeHeap* timeHeap::timeContain;
 
-timeHeap::timeHeap():size(0){
+timeHeap::timeHeap(int _delay):delay(_delay),size(0){
+
 }
+
 timeHeap::~timeHeap(){
     for(int i=0;i<size;i++){
         delete heap[i];
@@ -45,13 +47,13 @@ void timeHeap::popTimer(){
 
 void timeHeap::adjTimer(timer* _timer){
     time_t cur=time(nullptr);   //旧的不管，等着定时pop
-    timer* _timer1=new timer(cur+3*g_conf.DELAY);
+    timer* _timer1=new timer(cur+3*delay);
     _timer->userData=nullptr;
     _timer1->userData=_timer->userData;
     addTimer(_timer1);
 }
 /* 心跳函数*/
-void timeHeap::tick(){
+void timeHeap::tick() {
     if(size==0) return;
     timer* tmp=heap[0];
     time_t cur=time(nullptr);

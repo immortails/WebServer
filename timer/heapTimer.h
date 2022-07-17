@@ -5,7 +5,6 @@
 #include<vector>
 #include<netinet/in.h>
 #include<time.h>
-#include "../config.h"
 #include "../http/httpConn.h"
 class timeHeap;
 class timer;
@@ -28,8 +27,7 @@ public:
     clientData* userData;           //用户数据
     bool closedConn =false;         // 关闭连接的标记
 public:
-    timer(int _expire){
-        expire=_expire;
+    timer(int _expire):expire(_expire){
     }
 };
 
@@ -38,14 +36,18 @@ private:
     static timeHeap* timeContain;
     vector<timer*> heap;
     int size;
+    int delay;
 private:   
     //初始化为一个cap大小的空堆，时间堆只有一个所以用单例模式
-    timeHeap();
+    timeHeap(int _delay);
     ~timeHeap();
 
 public:
+    static timeHeap& getInstance(int _delay){
+        if(timeContain==nullptr) timeContain=new timeHeap(_delay);
+        return (*timeContain);
+    }
     static timeHeap& getInstance(){
-        if(timeContain==nullptr) timeContain=new timeHeap();
         return (*timeContain);
     }
     void addTimer(timer* _timer);

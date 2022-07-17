@@ -20,7 +20,6 @@
 #include<iostream>
 #include<sys/uio.h>
 #include "../locker/locker.h"
-#include "../config.h"
 
 /*定时器类*/
 const int BUFF_SIZE=64;
