@@ -1,14 +1,53 @@
 #ifndef CONFIG_H
 #define CONFIG_H
-    const int THREAD_NUMBER=8;              //线程池的线程数
-    const int MAX_REQUESTS=10000;           //线程池最大支持的连接数
-    const char IP[]="127.0.0.1";            //服务器ip地址
-    const char PORT[]="1500";               //服务器的port
+#include "cJSON/cJSON.h"
+#include <fstream>
+#include <iostream>
+struct conf {
+    int THREAD_NUMBER=8;              //线程池的线程数
+    int MAX_REQUESTS=10000;           //线程池最大支持的连接数
+    std::string IP;            //服务器ip地址
+    std::string PORT;               //服务器的port
+    int MAX_FD=65536;                 //epoll文件描述符数
+    int MAX_EVENT_NUMBER=10000;       //最多支持事件个数
+    int DELAY=3;                     //连接超时时间，单位s
+    conf(int _THREAD_NUMBER, int _MAX_REQUESTS, std::string _IP,
+         std::string _PORT, int _MAX_FD, int _MAX_EVENT_NUMBER, int _DELAY):THREAD_NUMBER(_THREAD_NUMBER), 
+                MAX_REQUESTS(_MAX_REQUESTS),IP(_IP), PORT(_PORT), MAX_FD(_MAX_FD), MAX_EVENT_NUMBER(_MAX_EVENT_NUMBER),DELAY(_DELAY) {}
+    conf() {}
+    ~conf() {}
 
-    const int MAX_FD=65536;                 //epoll文件描述符数
-    const int MAX_EVENT_NUMBER=10000;       //最多支持事件个数
+};
+conf g_conf;
+std::string file = "../server_conf.json";
 
-    const int DELAY=3;                     //连接超时时间，单位s
+void cofig_init() {
+    /* 读取json */
+    std::ifstream fin;
+    fin.open(file, std::ios_base::in);
+    std::string data;
+    while(fin >> data) {}
+    cJSON *config = nullptr;
+    cJSON *threadNumber, *maxRequests, *ip, *port, *maxFD, *maxEventNumber, *delay;
+    config = cJSON_Parse(data.c_str());
+    threadNumber = cJSON_GetObjectItem(config, "THREAD_NUMBER");
+    maxRequests = cJSON_GetObjectItem(config, "MAX_REQUESTS");
+    ip = cJSON_GetObjectItem(config, "IP");
+    port = cJSON_GetObjectItem(config, "PORT");
+    maxFD = cJSON_GetObjectItem(config, "MAX_FD");
+    maxEventNumber = cJSON_GetObjectItem(config, "MAX_EVENT_NUMBER");
+    delay = cJSON_GetObjectItem(config, "DELAY");
+
+    g_conf.THREAD_NUMBER = threadNumber->valueint;
+    g_conf.MAX_REQUESTS = maxRequests->valueint;
+    g_conf.MAX_EVENT_NUMBER = maxEventNumber->valueint;
+    g_conf.MAX_FD = maxFD->valueint;
+    g_conf.PORT = port->valuestring;
+    g_conf.IP = ip->valuestring;
+    g_conf.DELAY = delay->valueint;
+
+    cJSON_Delete(config);
+}
 
 
 #endif

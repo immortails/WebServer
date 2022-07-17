@@ -45,7 +45,7 @@ void timeHeap::popTimer(){
 
 void timeHeap::adjTimer(timer* _timer){
     time_t cur=time(nullptr);   //旧的不管，等着定时pop
-    timer* _timer1=new timer(cur+3*DELAY);
+    timer* _timer1=new timer(cur+3*g_conf.DELAY);
     _timer->userData=nullptr;
     _timer1->userData=_timer->userData;
     addTimer(_timer1);

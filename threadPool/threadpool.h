@@ -12,7 +12,7 @@ template<typename T>
 class threadpool{
 public:
     /*参数thread_number是线程池中线程的数量，max_requests是请求队列中最多允许的处理的请求数量*/
-    threadpool(int thread_number=THREAD_NUMBER,int max_requests=MAX_REQUESTS);
+    threadpool(int thread_number=gconf.THREAD_NUMBER,int max_requests=gconf.MAX_REQUESTS);
     ~threadpool();
     //往请求队列中添加任务
     bool append(T* request);
@@ -51,8 +51,8 @@ threadpool<T>::threadpool(int threadNumber,int maxRequests):mThreadNumber(thread
 
 template<typename T>
 threadpool<T>::~threadpool(){
-    delete [] mThreads;
     mStop=true;
+    delete [] mThreads;
 }
 
 template< typename T>

@@ -1,0 +1,9 @@
+{
+    "THREAD_NUMBER": 8,
+    "MAX_REQUESTS": 10000,
+    "IP":"127.0.0.1",
+    "PORT":"1500",
+    "MAX_FD":"65536",
+    "MAX_EVENT_NUMBER":10000,
+    "DELAY":3
+}
