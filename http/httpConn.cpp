@@ -358,7 +358,7 @@ bool httpConn::addResponse(const char* format, ...){
 }
 
 bool httpConn::addStatusLine(int status,const char* title){
-    return addResponse("%s,%d %s\r\n","HTTP/1.1",status,title);
+    return addResponse("%s %d %s\r\n","HTTP/1.1",status,title);
 }
 
 bool httpConn::addHeaders(int contentLen){
@@ -432,6 +432,7 @@ bool httpConn::processWrite(HTTP_CODE ret){
                 mIvCnt=2;
                 return true;
             }else{
+                printf("file not \n");
                 const char* ok_string="<html><body></body></html>";
                 addHeaders(strlen(ok_string));
                 if(!addContent(ok_string)){
@@ -460,7 +461,6 @@ void httpConn::process(){
     }
     bool writeRet =processWrite(readRet);
     if(writeRet){
-        //先尝试在线程中写干净，写不完再交给主线程
         int flag=1;
         while(flag==1){
             flag=writeData();

@@ -77,7 +77,7 @@ private:
 public:
     static int mEpollfd;                   //所有socket上的事件都被注册到同一个epoll内核事件上，所以用static
     static int mUserCount;                 //统计用户数量
-    int mPipefd;                    //向server中回传任务执行完毕
+    int mPipefd;                    
     int mSockfd;                           //该HTTP连接的socket
 private:
     sockaddr_in mAddress;                  //对方的socket地址

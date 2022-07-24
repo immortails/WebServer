@@ -25,8 +25,10 @@
 
 class server{
 private:
+    int idx = 0;
     int listenfd;
-    int epollfd;
+    int mainEpollfd;
+    int subEpollfd[3];
     threadpool<clientData>* pool=nullptr;
     epoll_event* events;
     clientData* users;
@@ -43,8 +45,11 @@ static int pipefd[2];
     ~server();
     void initThreadPool();          //初始化线程池
     void initSocket();              //初始化连接
+    void initEpollfd(int* epollfd);
     void init();                    //初始化
-    void workLoop();                //主循环
+    void workLoop();                
+    void subRactor(int* curEpollfd);    //负责处理事件
+    void mainRactor(int* curEpollfd);   //只负责接收新连接
 };
 
 #endif
